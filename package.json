@@ -1,0 +1,17 @@
+{
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "start": "node build/source/index.js",
+        "dev": "ts-node index.ts"
+    },
+    "dependencies": {
+        "@fastify/cookie": "^9.3.1",
+        "@fastify/session": "^10.9.0",
+        "dotenv": "^16.4.5",
+        "fastify": "^4.28.1",
+        "typescript": "^5.5.3"
+    },
+    "devDependencies": {
+        "ts-node": "^10.9.2"
+    }
+}
