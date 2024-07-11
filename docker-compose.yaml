@@ -1,0 +1,10 @@
+version: '3'
+services:
+    projectx:
+        container_name: projectx
+        build: .
+        ports:
+            - "3000:3000"
+
+    nginx:
+        image: nginx:latest
