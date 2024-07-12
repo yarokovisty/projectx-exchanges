@@ -2,8 +2,13 @@ import {Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Switch,
 import axios from "axios"
 import { useEffect, useState } from "react"
 import {Tabs, Tab, Card, CardBody, CardHeader} from "@nextui-org/react"
-  
-export interface IPriceData {
+
+interface IExchanges {
+    name: string
+    status: string
+    typeSyntax: number
+}
+interface IPriceData {
     exchangeId: string
     pair: string
     price: {
@@ -12,10 +17,6 @@ export interface IPriceData {
     }
 }
 
-interface IExchanges {
-    name: string
-    status: string
-}
 
 export function CalcURLWithParams(
     baseURL: string,
@@ -64,6 +65,7 @@ export const TransformPair = (pair: string, flags: number): string => {
 
 
 export default function App() {
+    const [exchangesData, setExchangeData] = useState<IPriceData[]>([])
     const [exchanges, setExchanges] = useState<IExchanges[]>([])
     const [isInited, setIsInited] = useState(false)
     const AviablePairs: Record<string, Array<string>> = {
@@ -94,12 +96,16 @@ export default function App() {
                     Object.entries(AviablePairs).flatMap(([_, pairs]) =>
                         pairs.map(async (pair) => {
                             try {
-                                // const url = CalcURLWithParams(pair.url, pairOptions)
-                                const response = await axios.get(`http://localhost:3000/api/getPrices`, {
-                                    params: { exchange: exchange.name, pair }
-                                })
-
-                                console.log(response.data)
+                                const url = CalcURLWithParams(
+                                    "http://localhost:3000",
+                                    "/api/getPrices",
+                                    {
+                                        exchange: exchange.name,
+                                        pair: TransformPair(pair, exchange.typeSyntax)
+                                    }
+                                )
+                                const response = await axios.get(url)
+                                setExchangeData(response.data)
                             } catch (error) {
                                 console.error(`Error fetching price for ${exchange.name} and ${pair}:`, error)
                             }
@@ -139,19 +145,18 @@ export default function App() {
                                     </TableHeader>
 
                                     <TableBody emptyContent={"Нет информации о спреде"}>
-                                        <TableRow key="1">
-                                            {/* <TableCell className="font-bold">{exchangesData.exchangeId.toUpperCase()}</TableCell> */}
-                                            {/* <TableCell className="font-bold">{exchangesData.pair.toUpperCase()}</TableCell> */}
-                                            {/* <TableCell className="font-bold">{exchangesData.price.buy}</TableCell> */}
-                                            {/* <TableCell className="font-bold">{exchangesData.price.sell}</TableCell> */}
-                                            <TableCell className="font-bold">?</TableCell>
-                                            <TableCell className="font-bold">?</TableCell>
-                                            <TableCell className="font-bold">?</TableCell>
-                                            <TableCell className="font-bold">?</TableCell>
+                                    {exchangesData.map((exchangeData, index) => (
+                                        <TableRow key={index}>
+                                            <TableCell className="font-bold">{exchangeData.exchangeId}</TableCell>
+                                            <TableCell className="font-bold">{exchangeData.pair}</TableCell>
+                                            <TableCell className="font-bold">{exchangeData.price.buy}</TableCell>
+                                            <TableCell className="font-bold">{exchangeData.price.sell}</TableCell>
                                             <TableCell className="font-bold">?</TableCell>
                                             <TableCell className="font-bold">?</TableCell>
                                             <TableCell className="font-bold">Active</TableCell>
                                         </TableRow>
+                                    ))}
+
                                     </TableBody>
                                 </Table>
                             </section>
@@ -208,35 +213,3 @@ export default function App() {
         </div>  
     </section>
 }
-
-
-
-
-
-
-
-
-
-
-
-// useEffect(() => {
-//     let isInited = false
-
-
-//     
-
-//     if (!isInited) {
-//       getExchanges().then(() => {
-//         getPrices()
-//         isInited = true
-//       })
-//     } else {
-//       getPrices()
-//     }
-
-//     const intervalId = setInterval(() => {
-//       getPrices()
-//     }, 60000) // 60000 ms = 1 min
-
-//     return () => clearInterval(intervalId)
-//   }, [exchanges])
