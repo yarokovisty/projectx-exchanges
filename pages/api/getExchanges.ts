@@ -12,7 +12,7 @@ interface IExchanges {
 
 export default async (req: NextApiRequest, res: NextApiResponse) => {
     try {
-        const { data } : { data: IExchanges } = await axios.get("http://66.151.40.231:5144/exchanges/get")
+        const { data } : { data: IExchanges } = await axios.get("http://localhost:5144/exchanges/get")
 
         const exchangesWithStatus = Object.entries(data).map(([name, exchange]) => ({
             name,

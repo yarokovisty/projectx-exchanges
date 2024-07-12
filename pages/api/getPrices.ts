@@ -3,7 +3,9 @@ import axios from "axios"
 
 export default async (req: NextApiRequest, res: NextApiResponse) => {
     try {
-        const { data } = await axios.get("http://66.151.40.231:5144/exchanges/bingix/btcusdt");
+        const { exchange, pair } = req.query
+        console.log(exchange);
+        const { data } = await axios.get(`http://localhost:5144/exchanges/${exchange}/${pair}`);
         res.status(200).json(data);
     } catch (error) {
         console.error(error);
