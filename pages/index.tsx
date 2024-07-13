@@ -1,230 +1,194 @@
-import {Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Switch, Input, Button} from "@nextui-org/react"
 import axios from "axios"
 import { useEffect, useState } from "react"
-import {Tabs, Tab, Card, CardBody, CardHeader} from "@nextui-org/react"
 
-interface IExchanges {
-    name: string
-    status: string
-    typeSyntax: number
-}
-interface IPriceData {
-    exchangeId: string
-    pair: string
-    price: {
-        buy: number
-        sell: number
-    }
-}
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Link } from "@nextui-org/react"
+import { Tabs, Tab, Card, CardBody, CardHeader } from "@nextui-org/react"
+import { motion } from "framer-motion"
 
+import { SettingComponent } from "@/components/settings"
+import { CalcURLWithParams } from "@/components/functions/CalcURLWithParams"
+import { TransformPair } from "@/components/functions/TransformPair"
+import { ISettings, IExchanges, IPriceData, ISpreadData } from "@/components/interfaces"
+import { CalcSpreadData } from "@/components/functions/CalcSpreadData"
 
-export function CalcURLWithParams(
-    baseURL: string,
-    path: string,
-    params?: Record<string, string>
-): string {
-    const keys = params ? Object.keys(params) : []
-    let url = baseURL + path
-
-    if (keys.length > 0) {
-        url += "?"
-        for (let i = 0; i < keys.length; i++) {
-            const key = keys[i]
-            if (params) {
-                const value = encodeURIComponent(params[key])
-                url += `${key}=${value}`
-            }
-
-            if (i < keys.length - 1) {
-                url += "&"
-            }
-        }
-    }
-
-    return url
-}
-
-export const TransformPair = (pair: string, flags: number): string => {
-    const normalizedPair = pair.replace(/[\s\/-]/g, '').toLowerCase()
-    
-    const part1 = normalizedPair.slice(0, normalizedPair.length / 2)
-    const part2 = normalizedPair.slice(normalizedPair.length / 2)
-
-    const useLowerCase = (flags & 0b10) === 0
-    const useDash = (flags & 0b01) !== 0
-
-    let result = useDash ? `${part1}-${part2}` : `${part1}${part2}`
-    result = useLowerCase ? result.toLowerCase() : result.toUpperCase()
-
-    return result
-}
-
-
-
-
-
-
-export default function App() {
-    const [exchangesData, setExchangeData] = useState<IPriceData[]>([])
-    const [exchanges, setExchanges] = useState<IExchanges[]>([])
-    const [isInited, setIsInited] = useState(false)
+export default function HomePage() {
+    // Pair data
     const AviablePairs: Record<string, Array<string>> = {
         BTC: ["BTC USDT", "BTC USDC"],
         ETH: ["ETH USDT", "ETH USDC"]
     }
-    
-    useEffect(() => {
-        const getExchanges = async () => {
-            try {
-                const response = await axios.get("http://localhost:3000/api/getExchanges")
-                setExchanges(response.data)
-                setIsInited(true)
-            } catch (error) {
-                console.error('Error fetching exchanges data:', error)
-            }
+
+    // Exchanges data, price and state
+    const [ exchangesData, setExchangeData ] = useState<IPriceData[]>([])
+    const [ exchanges, setExchanges ] = useState<IExchanges[]>([])
+    const [ spreadInfo, setSpreadInfo ] = useState<ISpreadData[]>([])
+    const [ isInited, setIsInited ] = useState(false)
+
+
+    // Internal functions
+    async function GetExchanges() {
+        try {
+            const response = await axios.get("http://localhost:3000/api/getExchanges")
+            setExchanges(response.data)
+            setIsInited(true)
+        } catch (error) {
+            console.error('Error fetching exchanges data:', error)
         }
+    }
+
+    async function GetPrices() {
+        if (!isInited || exchanges.length === 0) return
+
+        try {
+            const promises = exchanges.flatMap((exchange) =>
+                Object.entries(AviablePairs).flatMap(([_, pairs]) =>
+                    pairs.map(async (pair) => {
+                        try {
+                            const url = CalcURLWithParams(
+                                "http://localhost:3000",
+                                "/api/getPrices",
+                                {
+                                    exchange: exchange.name,
+                                    pair: TransformPair(pair, exchange.typeSyntax)
+                                }
+                            )
+                            const response: IPriceData = (await axios.get(url)).data
+                            const newPriceData: IPriceData = response
+                            setExchangeData(prevData => {
+                                const existingIndex = prevData.findIndex(
+                                    data => data.exchangeId === newPriceData.exchangeId && data.pair === newPriceData.pair
+                                )
+
+                                if (existingIndex !== -1) {
+                                    const updatedData = [...prevData]
+                                    updatedData[existingIndex] = newPriceData
+                                    return updatedData
+                                } else return [...prevData, newPriceData]
+                            })
+                        } catch (error) {
+                            console.error(`Error fetching price for ${exchange.name} and ${pair}:`, error)
+                        }
+                    })
+                )
+            )
+            await Promise.all(promises)
+        } catch (error) {
+            console.error('Error fetching prices data:', error)
+        }
+    }
     
-        getExchanges()
+    // Calling functions on the client
+    useEffect(() => {
+        GetExchanges()
     }, [])
     
     useEffect(() => {
-        const getPrices = async () => {
-            if (!isInited || exchanges.length === 0) return
+        const settings: ISettings = JSON.parse(
+            localStorage.getItem("settings") || "{}"
+        ) as ISettings
 
-            try {
-                const promises = exchanges.flatMap((exchange) =>
-                    Object.entries(AviablePairs).flatMap(([_, pairs]) =>
-                        pairs.map(async (pair) => {
-                            try {
-                                const url = CalcURLWithParams(
-                                    "http://localhost:3000",
-                                    "/api/getPrices",
-                                    {
-                                        exchange: exchange.name,
-                                        pair: TransformPair(pair, exchange.typeSyntax)
-                                    }
-                                )
-                                const response: IPriceData = (await axios.get(url)).data
-                                const newPriceData: IPriceData = response
-                                setExchangeData(prevData => {
-                                    const existingIndex = prevData.findIndex(
-                                        data => data.exchangeId === newPriceData.exchangeId && data.pair === newPriceData.pair
-                                    );
+        console.log(settings)
 
-                                    if (existingIndex !== -1) {
-                                        // Update existing data
-                                        const updatedData = [...prevData];
-                                        updatedData[existingIndex] = newPriceData;
-                                        return updatedData;
-                                    } else {
-                                        // Add new data
-                                        return [...prevData, newPriceData];
-                                    }
-                                });
-                            } catch (error) {
-                                console.error(`Error fetching price for ${exchange.name} and ${pair}:`, error)
-                            }
-                        })
-                    )
-                )
-                await Promise.all(promises)
-            } catch (error) {
-                console.error('Error fetching prices data:', error)
-            }
-        }
-
-        const intervalId = setInterval(getPrices, 5000)
-
-        getPrices()
+        const intervalId = setInterval(GetPrices, 5000)
 
         return () => clearInterval(intervalId)
     }, [isInited, exchanges])
 
-    
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            if (exchangesData && exchangesData.length > 0) {
+                const spreads = CalcSpreadData(exchangesData)
+                console.log(spreads)
+                setSpreadInfo(spreads)
+            } else {
+                console.log('No price data available yet.')
+            }
+        }, 500)
+
+        return () => clearInterval(intervalId)
+    }, [exchangesData])
+
     return <section className="space-y-5 mt-2">
-        <div className="flex w-full flex-col">
+        <section className="flex items-center flex-col">
             <Tabs color="danger" size="lg" aria-label="Options">
                 <Tab key="Pairs" title="Pairs">
-                    <Card>
-                        <CardBody>
-                            <section className="w-2/3 mx-auto">
-                                <Table aria-label="TableSpread">
-                                    <TableHeader>
-                                        <TableColumn className="text-lg font-bold">Биржа</TableColumn>
-                                        <TableColumn className="text-lg font-bold">Монеты</TableColumn>
-                                        <TableColumn className="text-lg font-bold">Покупка</TableColumn>
-                                        <TableColumn className="text-lg font-bold">Продажа</TableColumn>
-                                        <TableColumn className="text-lg font-bold">Комиссии</TableColumn>
-                                        <TableColumn className="text-lg font-bold">Доход</TableColumn>
-                                        <TableColumn className="text-lg font-bold">Статус</TableColumn>
-                                    </TableHeader>
-
-                                    <TableBody emptyContent={"Нет информации о спреде"}>
-                                    {exchangesData.map((exchangeData, index) => (
-                                        <TableRow key={index}>
+                    <Table aria-label="TableSpread">
+                        <TableHeader>
+                            <TableColumn className="text-lg font-bold">Биржа</TableColumn>
+                            <TableColumn className="text-lg font-bold">Монеты</TableColumn>
+                            <TableColumn className="text-lg font-bold">Покупка</TableColumn>
+                            <TableColumn className="text-lg font-bold">Продажа</TableColumn>
+                            <TableColumn className="text-lg font-bold">Комиссии</TableColumn>
+                            <TableColumn className="text-lg font-bold">Статус</TableColumn>
+                        </TableHeader>
+                        
+                        <TableBody emptyContent={"Нет информации о спреде"}>
+                            {exchangesData.map((exchangeData, index) => (
+                                    <TableRow key={index}>
                                             <TableCell className="font-bold">{exchangeData.exchangeId.toUpperCase()}</TableCell>
                                             <TableCell className="font-bold">{exchangeData.pair.toUpperCase()}</TableCell>
                                             <TableCell className="font-bold">{exchangeData.price.buy}</TableCell>
                                             <TableCell className="font-bold">{exchangeData.price.sell}</TableCell>
                                             <TableCell className="font-bold">?</TableCell>
-                                            <TableCell className="font-bold">?</TableCell>
                                             <TableCell className="font-bold">Active</TableCell>
-                                        </TableRow>
-                                    ))}
+                                    </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </Tab>
 
-                                    </TableBody>
-                                </Table>
-                            </section>
-                        </CardBody>
-                    </Card>  
+                <Tab key="PriceDifference" title="Difference">
+                    <Table aria-label="TableSpread">
+                        <TableHeader>
+                            <TableColumn className="text-lg font-bold">Направление</TableColumn>
+                            <TableColumn className="text-lg font-bold">Пара</TableColumn>
+                            <TableColumn className="text-lg font-bold">Покупка</TableColumn>
+                            <TableColumn className="text-lg font-bold">Продажа</TableColumn>
+                            <TableColumn className="text-lg font-bold">Общая комиссия</TableColumn>
+                            <TableColumn className="text-lg font-bold">Разница</TableColumn>
+                            <TableColumn className="text-lg font-bold">Ссылка</TableColumn>
+                        </TableHeader>
+                        
+                        <TableBody emptyContent={"Нет информации о спреде"}>
+                            {spreadInfo.map((spreadData, index) => (
+                                <TableRow key={index}>
+                                    <TableCell className="font-bold text-center">
+                                        {spreadData.BuyExchangeId}
+                                        {"-"}
+                                        {spreadData.SellExchangeId}
+                                    </TableCell>
+                                    <TableCell className="font-bold text-center">{spreadData.pair}</TableCell>
+                                    <TableCell className="font-bold text-center">{spreadData.minBuy}</TableCell>
+                                    <TableCell className="font-bold text-center">{spreadData.maxSell}</TableCell>
+                                    <TableCell className="font-bold text-center">?</TableCell>
+                                    <TableCell className="font-bold text-center">{spreadData.spread}</TableCell>
+                                    <TableCell className="font-bold text-center"><Link href="https://binance.com">Тык</Link></TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
                 </Tab>
 
                 <Tab key="ExchangesStatus" title="Status">
-                    <Card>
-                        <CardBody>
-                            <section className="flex justify-around">
-                                {exchanges.map((exchange, index) => (
-                                    <Card className="w-fit">
-                                        <CardHeader className="space-x-2" key={index}>
-                                            <h1 className="text-2xl font-bold">{exchange.name.toUpperCase()}</h1>
-                                            <span className={` ${exchange.status == "active" ? "bg-green-600" : "bg-red-600" } rounded-full animate-pulse w-3 h-3`}></span>
-                                        </CardHeader>
-                                        <CardBody>
-                                            <p className="font-bold">Status: {exchange.status}</p>
-                                        </CardBody>
-                                    </Card>
-                                ))}
-                            </section>
-                        </CardBody>
-                    </Card>  
+                    <section className="flex justify-around">
+                        {exchanges.map((exchange, index) => (
+                            <Card className="w-fit">
+                                <CardHeader className="space-x-2" key={index}>
+                                    <h1 className="text-2xl font-bold">{exchange.name.toUpperCase()}</h1>
+                                    <span className={` ${exchange.status == "active" ? "bg-green-600" : "bg-red-600" } rounded-full animate-pulse w-3 h-3`}></span>
+                                </CardHeader>
+                                <CardBody>
+                                    <p className="font-bold">Status: {exchange.status}</p>
+                                </CardBody>
+                            </Card>
+                        ))}
+                    </section>
                 </Tab>
 
                 <Tab key="videos" title="Settings">
-                    <Card>
-                        <CardBody>
-                            <section className="space-y-2 w-2/3 mx-auto">
-                                <section className="flex space-x-2 w-fit">
-                                    <h1>Уведомления в Telegram</h1>
-                                    <Switch defaultSelected />
-                                </section>
-
-                                <section className="flex space-x-2 w-fit">
-                                    <h1>Обновление</h1>
-                                    <Input placeholder="Переодичность (сек)" size="sm" />
-                                </section>
-
-                                <section className="flex space-x-2 w-fit">
-                                    <h1>Спред</h1>
-                                    <Switch defaultSelected />
-                                    <Input placeholder="Переодичность (сек)" size="sm" />
-                                </section>
-
-                                <Button color="primary">Сохранить</Button>
-                            </section>
-                        </CardBody>
-                    </Card>  
+                    <SettingComponent />
                 </Tab>
             </Tabs>
-        </div>  
+        </section>  
     </section>
 }
