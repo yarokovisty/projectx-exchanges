@@ -1,0 +1,10 @@
+# Folders
+node_modules
+.next
+api
+
+# Files
+README.md
+.eslintignore
+.eslintrc.json
+.gitignore

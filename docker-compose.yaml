@@ -1,12 +1,20 @@
 version: '3'
 
 services:
-    projectx:
-        container_name: projectx
+    external_api:
+        container_name: external_api
         build: ./api
-        ports: 
-            - "5144:5144"
-        # expose:
+        expose:
+            - 5144
+
+
+    frontend:
+        container_name: frontend
+        build: .
+        expose:
+            - 3000
+        depends_on:
+            - external_api
 
     nginx:
         image: nginx:latest
@@ -16,4 +24,4 @@ services:
         volumes:
             - ./nginx.conf:/etc/nginx/nginx.conf:ro
         depends_on:
-            - projectx
+            - frontend
