@@ -104,8 +104,23 @@ export default function App() {
                                         pair: TransformPair(pair, exchange.typeSyntax)
                                     }
                                 )
-                                const response = await axios.get(url)
-                                setExchangeData(response.data)
+                                const response: IPriceData = (await axios.get(url)).data
+                                const newPriceData: IPriceData = response
+                                setExchangeData(prevData => {
+                                    const existingIndex = prevData.findIndex(
+                                        data => data.exchangeId === newPriceData.exchangeId && data.pair === newPriceData.pair
+                                    );
+
+                                    if (existingIndex !== -1) {
+                                        // Update existing data
+                                        const updatedData = [...prevData];
+                                        updatedData[existingIndex] = newPriceData;
+                                        return updatedData;
+                                    } else {
+                                        // Add new data
+                                        return [...prevData, newPriceData];
+                                    }
+                                });
                             } catch (error) {
                                 console.error(`Error fetching price for ${exchange.name} and ${pair}:`, error)
                             }
@@ -147,8 +162,8 @@ export default function App() {
                                     <TableBody emptyContent={"Нет информации о спреде"}>
                                     {exchangesData.map((exchangeData, index) => (
                                         <TableRow key={index}>
-                                            <TableCell className="font-bold">{exchangeData.exchangeId}</TableCell>
-                                            <TableCell className="font-bold">{exchangeData.pair}</TableCell>
+                                            <TableCell className="font-bold">{exchangeData.exchangeId.toUpperCase()}</TableCell>
+                                            <TableCell className="font-bold">{exchangeData.pair.toUpperCase()}</TableCell>
                                             <TableCell className="font-bold">{exchangeData.price.buy}</TableCell>
                                             <TableCell className="font-bold">{exchangeData.price.sell}</TableCell>
                                             <TableCell className="font-bold">?</TableCell>
