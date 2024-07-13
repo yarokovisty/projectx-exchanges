@@ -4,8 +4,9 @@ services:
     projectx:
         container_name: projectx
         build: ./api
-        expose:
-            - "3000"
+        ports: 
+            - "5144:5144"
+        # expose:
 
     nginx:
         image: nginx:latest
