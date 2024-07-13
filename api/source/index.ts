@@ -5,9 +5,15 @@ import { GetExchanges } from "./vendor/exchanges"
 import { BingixFetcher } from "./vendor/exchanges/bingix"
 import { GarantexFetcher } from "./vendor/exchanges/garantex"
 import { TransformPair } from "./vendor/utils"
+import { BybitFetcher } from "./vendor/exchanges/bybit"
+import { BitgetFetcher } from "./vendor/exchanges/bitget"
 
 const fastify = Fastify({ logger: true })
+const host = String(process.env.LISTENING_HOST)
+const port = Number(process.env.LISTENING_PORT)
+
 dotenv.config({ debug: true })
+
 
 const AviablePairs: Record<string, Array<string>> = {
     BTC: ["BTC USDT", "BTC USDC"],
@@ -16,12 +22,14 @@ const AviablePairs: Record<string, Array<string>> = {
 
 const Exchanges = GetExchanges([
     new BingixFetcher(AviablePairs, "active", "Bingix"),
-    new GarantexFetcher(AviablePairs, "active", "Garantex")
+    new GarantexFetcher(AviablePairs, "active", "Garantex"),
+    new BybitFetcher(AviablePairs, "active", "Bybit"),
+    new BitgetFetcher(AviablePairs, "active", "Bitget")
 ])
 
 
 fastify.get("/", async (request: FastifyRequest, reply: FastifyReply) => {
-    return { hello: "Work!!!" }
+    return reply.status(200).send({ status: "OK" })
 })
 
 fastify.get("/exchanges/get", async (request: FastifyRequest, reply: FastifyReply) => {
@@ -30,15 +38,14 @@ fastify.get("/exchanges/get", async (request: FastifyRequest, reply: FastifyRepl
     for(let i = 0; i < Exchanges.length; i++) {
         data[Exchanges[i].name] = {
             status: Exchanges[i].Status,
-            pairs: Exchanges[i].AviablePairs
+            pairs: Exchanges[i].AviablePairs,
+            typeSyntax: Exchanges[i].GetTypePairSyntaxRequest
         }
     }
 
     return data
 })
 
-// 1. Bybit
-// 3.Bitget
 // 5. HTX (Huobi)
 
 fastify.get("/exchanges/:exchangeId/:pair", async (
@@ -74,7 +81,7 @@ fastify.get("/exchanges/:exchangeId/:pair", async (
     });
 });
 
-fastify.listen({port: 3000, host: "0.0.0.0"}, (err, address) => {
+fastify.listen({port: port, host: host}, (err, address) => {
     if (err) throw err
     console.log(`Server listening on ${address}`)
 })

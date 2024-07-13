@@ -9,35 +9,37 @@
  * 
  * @example
  * ```typescript
- * const baseURL = "https://api.example.com";
- * const path = "/v1/ticker";
- * const params = { symbol: "BTC USDT" };
- * const url = CalcURLWithParams(baseURL, path, params);
- * console.log(url); // Output: "https://api.example.com/v1/ticker?symbol=BTC%20USDT"
+ * const baseURL = "https://api.example.com"
+ * const path = "/v1/ticker"
+ * const params = { symbol: "BTC USDT" }
+ * const url = CalcURLWithParams(baseURL, path, params)
+ * console.log(url) // Output: "https://api.example.com/v1/ticker?symbol=BTC%20USDT"
  * ```
 */
 export function CalcURLWithParams(
     baseURL: string,
     path: string,
-    params: Record<string, string>
+    params?: Record<string, string>
 ): string {
-    const keys = Object.keys(params);
-    let url = baseURL + path;
+    const keys = params ? Object.keys(params) : []
+    let url = baseURL + path
 
     if (keys.length > 0) {
-        url += "?";
+        url += "?"
         for (let i = 0; i < keys.length; i++) {
-            const key = keys[i];
-            const value = encodeURIComponent(params[key]);
-            url += `${key}=${value}`;
+            const key = keys[i]
+            if (params) {
+                const value = encodeURIComponent(params[key])
+                url += `${key}=${value}`
+            }
 
             if (i < keys.length - 1) {
-                url += "&";
+                url += "&"
             }
         }
     }
 
-    return url;
+    return url
 }
 
 
@@ -58,18 +60,16 @@ export function CalcURLWithParams(
  * @returns The transformed string based on the input pair and flags.
 */
 export const TransformPair = (pair: string, flags: number): string => {
-    // Нормализация входных данных: удаление пробелов и дефисов
-    const normalizedPair = pair.replace(/[\s-]/g, '').toLowerCase();
+    const normalizedPair = pair.replace(/[\s\/-]/g, '').toLowerCase()
     
-    // Разделение нормализованной строки на две части
-    const part1 = normalizedPair.slice(0, normalizedPair.length / 2);
-    const part2 = normalizedPair.slice(normalizedPair.length / 2);
+    const part1 = normalizedPair.slice(0, normalizedPair.length / 2)
+    const part2 = normalizedPair.slice(normalizedPair.length / 2)
 
-    const useLowerCase = (flags & 0b10) === 0;
-    const useDash = (flags & 0b01) !== 0;
+    const useLowerCase = (flags & 0b10) === 0
+    const useDash = (flags & 0b01) !== 0
 
-    let result = useDash ? `${part1}-${part2}` : `${part1}${part2}`;
-    result = useLowerCase ? result.toLowerCase() : result.toUpperCase();
+    let result = useDash ? `${part1}-${part2}` : `${part1}${part2}`
+    result = useLowerCase ? result.toLowerCase() : result.toUpperCase()
 
-    return result;
+    return result
 }

@@ -1,5 +1,5 @@
 # Use Node.js 16 as the base image
-FROM node:16
+FROM node:18
 
 # Set the working directory in the container to /app
 WORKDIR /app
@@ -17,7 +17,7 @@ COPY . .
 RUN npm run build
 
 # Expose port 3000 for the application
-EXPOSE 3000
+EXPOSE 5144
 
 # Start the application
 CMD ["npm", "run", "start"]
