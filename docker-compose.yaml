@@ -3,9 +3,16 @@ version: '3'
 services:
     projectx:
         container_name: projectx
-        build: .
-        ports:
-            - "3000:3000"
+        build: ./api
+        expose:
+            - "3000"
 
     nginx:
         image: nginx:latest
+        container_name: nginx
+        ports:
+            - "80:80"
+        volumes:
+            - ./nginx.conf:/etc/nginx/nginx.conf:ro
+        depends_on:
+            - projectx
