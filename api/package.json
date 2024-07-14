@@ -2,7 +2,7 @@
     "scripts": {
         "build": "tsc -p tsconfig.json",
         "start": "node build/source/index.js",
-        "dev": "ts-node index.ts"
+        "dev": "ts-node ./source/index.ts"
     },
     "dependencies": {
         "@fastify/cookie": "^9.3.1",
