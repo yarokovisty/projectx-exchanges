@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardBody, Switch, Input, Button } from "@nextui-org/react"
 
 interface ISettings {
