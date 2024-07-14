@@ -27,6 +27,7 @@ export default function HomePage() {
     const [ exchanges, setExchanges ] = useState<IExchanges[]>([])
     const [ spreadInfo, setSpreadInfo ] = useState<ISpreadData[]>([])
     const [ isInited, setIsInited ] = useState(false)
+    const [ sortConfig, setSortConfig ] = useState<{ key: string; direction: string }>({ key: "", direction: "" });
 
 
     async function GetExchanges() {
@@ -110,11 +111,50 @@ export default function HomePage() {
         return () => clearInterval(intervalId)
     }, [exchangesData])
 
+
+    const sortData = (key: string) => {
+        let direction = "ascending";
+        if (sortConfig.key === key && sortConfig.direction === "ascending") {
+            direction = "descending";
+        }
+
+        const sortedData = [...exchangesData].sort((a, b) => {
+            const aValue = getSortValue(a, key);
+            const bValue = getSortValue(b, key);
+
+            if (aValue < bValue) {
+                return direction === "ascending" ? -1 : 1;
+            }
+            if (aValue > bValue) {
+                return direction === "ascending" ? 1 : -1;
+            }
+            return 0;
+        });
+
+        setSortConfig({ key, direction });
+        setExchangeData(sortedData);
+    };
+
+    const getSortValue = (item: IPriceData, key: string): any => {
+        switch (key) {
+            case "exchangeId":
+                return item.exchangeId;
+            case "pair":
+                return item.pair;
+            case "price.buy":
+                return item.price.buy;
+            case "price.sell":
+                return item.price.sell;
+            default:
+                return "";
+        }
+    };
+
     return <section className="space-y-5 mt-2">
         <section className="flex items-center flex-col">
             <Tabs color="danger" size="lg" aria-label="Options">
-                <Tab key="Pairs" title="Pairs">
-                    <Pairs exchangesData={ exchangesData }/>
+            <Tab key="Pairs" title="Pairs">
+                    <Pairs exchangesData={exchangesData} sortData={sortData} sortConfig={sortConfig} />
                 </Tab>
 
                 <Tab key="PriceDifference" title="Difference">
